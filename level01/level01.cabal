@@ -64,6 +64,7 @@ library
                      , wai == 3.2.*
                      , warp == 3.2.*
                      , http-types == 0.9.*
+                     , bytestring
 
   -- Directories containing source files.
   hs-source-dirs:      src
