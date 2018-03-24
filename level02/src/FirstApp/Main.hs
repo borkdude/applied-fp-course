@@ -140,11 +140,14 @@ handleRequest (ViewRq _)  = Right (resp200 JSON "Not implemented yet")
 -- as a guide.
 app
   :: Application
-app request response =
-  either mkErrorResponse
-    (either mkErrorResponse id . handleRequest)
-     <$> mkRequest request
-  >>= response
+
+app request response = do
+  reqE <- mkRequest request
+  let
+    respE = do
+      req <- reqE
+      handleRequest req
+  response $ either mkErrorResponse id respE
 
 runApp :: IO ()
 runApp = run 3000 app
