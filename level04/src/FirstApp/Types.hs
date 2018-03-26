@@ -30,12 +30,13 @@ import qualified Data.Aeson.Types           as A
 
 import           Data.Time                  (UTCTime)
 
-import           FirstApp.DB.Types          (DBComment (..))
+import           FirstApp.DB.Types          (DBComment (DBComment))
 import           FirstApp.Types.CommentText (CommentText, mkCommentText
                                             , getCommentText)
 import           FirstApp.Types.Error       (Error( UnknownRoute
                                                   , EmptyCommentText
                                                   , EmptyTopic
+                                                  , DBError
                                                   )
                                             )
 import           FirstApp.Types.Topic       (Topic, mkTopic, getTopic)

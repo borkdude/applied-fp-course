@@ -22,8 +22,10 @@ import qualified Database.SQLite.SimpleErrors       as Sql
 import           Database.SQLite.SimpleErrors.Types (SQLiteResponse)
 
 import           FirstApp.Types                     (Comment, CommentText,
-                                                     Error, Topic, getTopic, fromDbComment)
+                                                     Error (DBError), Topic, getTopic, getCommentText, fromDbComment)
 import           FirstApp.DB.Types                  (DBComment)
+
+import Data.Bifunctor (bimap)
 
 -- ------------------------------------------------------------------------|
 -- You'll need the documentation for sqlite-simple ready for this section! |
@@ -95,12 +97,21 @@ addCommentToTopic
   -> Topic
   -> CommentText
   -> IO (Either Error ())
-addCommentToTopic =
-  let
-    sql = "INSERT INTO comments (topic,comment,time) VALUES (?,?,?)"
-  in
-    error "addCommentToTopic not implemented"
+addCommentToTopic appDb topic commentText =
+    do
+      time <- getCurrentTime
+      let
+        conn = dbConn appDb
+        t = getTopic topic
+        c = getCommentText commentText
+        sql = "INSERT INTO comments (topic,comment,time) VALUES (?,?,?)"
+      res <- Sql.runDBAction (Sql.execute conn sql (t, c, time))
+      return $ case res of
+        Left sqliteResp -> Left DBError
+        _ -> Right () 
 
+-- type DatabaseResponse a = Either SQLiteResponse a      
+--      DatabaseResponse () = Either SQLiteresponse ()
 
 getTopics
   :: FirstAppDB
