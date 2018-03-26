@@ -22,7 +22,8 @@ import qualified Database.SQLite.SimpleErrors       as Sql
 import           Database.SQLite.SimpleErrors.Types (SQLiteResponse)
 
 import           FirstApp.Types                     (Comment, CommentText,
-                                                     Error, Topic)
+                                                     Error, Topic, getTopic, fromDbComment)
+import           FirstApp.DB.Types                  (DBComment)
 
 -- ------------------------------------------------------------------------|
 -- You'll need the documentation for sqlite-simple ready for this section! |
@@ -44,7 +45,7 @@ closeDB
   :: FirstAppDB
   -> IO ()
 closeDB =
-  error "closeDb not implemented"
+  Sql.close . dbConn
 
 -- Given a `FilePath` to our SQLite DB file, initialise the database and ensure
 -- our Table is there by running a query to create it, if it doesn't exist
@@ -52,8 +53,11 @@ closeDB =
 initDB
   :: FilePath
   -> IO ( Either SQLiteResponse FirstAppDB )
-initDB fp =
-  error "initDb not implemented"
+initDB fp = do
+  -- runDBAction (execute conn insertSQL sqlData)
+  conn <- Sql.open fp
+  Sql.runDBAction (Sql.execute_ conn createTableQ)
+  return $ Right FirstAppDB { dbConn = conn }
   where
   -- Query has an `IsString` instance so string literals like this can be
   -- converted into a `Query` type when the `OverloadedStrings` language
@@ -74,15 +78,17 @@ getComments
   :: FirstAppDB
   -> Topic
   -> IO (Either Error [Comment])
-getComments =
+getComments appDb topic =
   let
     sql = "SELECT id,topic,comment,time FROM comments WHERE topic = ?"
   -- There are several possible implementations of this function. Particularly
   -- there may be a trade-off between deciding to throw an Error if a DbComment
   -- cannot be converted to a Comment, or simply ignoring any DbComment that is
   -- not valid.
-  in
-    error "getComments not implemented"
+    conn = dbConn appDb
+    t = getTopic topic
+  in mapM fromDbComment <$>
+    (Sql.query conn sql (Sql.Only t) :: IO [DBComment])
 
 addCommentToTopic
   :: FirstAppDB
