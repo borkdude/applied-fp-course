@@ -40,8 +40,21 @@ main = do
 
       -- Don't worry if you don't get all of these done. :)
 
+      describe "Add Route" $ do
+        it "Should return with error when given an empty comment" $
+          post "/foobar/add" "" `shouldRespondWith` "Empty Comment" {matchStatus = 400}
+
+      describe "View Route" $ do
+        it "Should return a topic" $
+          get "/foobar/view" `shouldRespondWith` "View Request not implemented"
+        it "Should raise an error" $
+          get "//view" `shouldRespondWith` "Empty Topic" {matchStatus = 400}
+
+      describe "Gibberish Route" $ do
+        it "Should return 404" $
+          get "/gibberish" `shouldRespondWith` 404
+ 
       -- 1) The '<topic>/add' route will respond with an error when given an empty comment
       -- 2) The '<topic>/view' route will respond correctly when given a topic
       -- 3) The '<topic>/view' route will respond with an error when given an empty topic
       -- 4) A gibberish route will return a 404
-
