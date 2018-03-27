@@ -22,7 +22,7 @@ import qualified Database.SQLite.SimpleErrors       as Sql
 import           Database.SQLite.SimpleErrors.Types (SQLiteResponse)
 
 import           FirstApp.Types                     (Comment, CommentText,
-                                                     Error (DBError), Topic, getTopic, getCommentText, fromDbComment)
+                                                     Error (DBError), Topic, mkTopic, getTopic, getCommentText, fromDbComment)
 import           FirstApp.DB.Types                  (DBComment)
 
 import Data.Bifunctor (bimap)
@@ -111,23 +111,27 @@ addCommentToTopic appDb topic commentText =
         _ -> Right () 
 
 -- type DatabaseResponse a = Either SQLiteResponse a      
---      DatabaseResponse () = Either SQLiteresponse ()
 
 getTopics
   :: FirstAppDB
   -> IO (Either Error [Topic])
-getTopics =
-  let
-    sql = "SELECT DISTINCT topic FROM comments"
-  in
-    error "getTopics not implemented"
+getTopics appDb =
+  do
+    let
+      conn = dbConn appDb    
+      sql = "SELECT DISTINCT topic FROM comments"
+    res <- Sql.runDBAction (Sql.query_ conn sql) :: IO (Either SQLiteResponse [Sql.Only Text])
+    return $ either (const (Left DBError)) (mapM (mkTopic . Sql.fromOnly)) res
 
 deleteTopic
   :: FirstAppDB
   -> Topic
   -> IO (Either Error ())
-deleteTopic =
-  let
-    sql = "DELETE FROM comments WHERE topic = ?"
-  in
-    error "deleteTopic not implemented"
+deleteTopic appDb topic =
+  do
+    let
+      conn = dbConn appDb
+      t = getTopic topic
+      sql = "DELETE FROM comments WHERE topic = ?"
+    res <- Sql.runDBAction (Sql.execute conn sql (Sql.Only t))
+    return $ bimap (const DBError) (const ()) res
