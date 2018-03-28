@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module FirstApp.Conf.File where
 
 import           Data.ByteString.Lazy       (ByteString)
@@ -9,14 +11,16 @@ import           Data.Text                  (Text)
 import           Data.Bifunctor             (first)
 import           Data.Monoid                (Last (Last))
 
-import           Control.Exception          (try)
+import           Control.Exception          (try, Exception, throwIO, throw)
 
 import           Data.Aeson                 (FromJSON, Object)
 
 import qualified Data.Aeson                 as Aeson
 
-import           FirstApp.Types             (ConfigError,
+import           FirstApp.Types             (ConfigError (ConfigFileError),
                                              PartialConf (PartialConf))
+
+import System.IO.Error (isDoesNotExistError)
 -- Doctest setup section
 -- $setup
 -- >>> :set -XOverloadedStrings
@@ -40,8 +44,8 @@ import           FirstApp.Types             (ConfigError,
 readConfFile
   :: FilePath
   -> IO ( Either ConfigError ByteString )
-readConfFile =
-  error "readConfFile not implemented"
+readConfFile fp =
+  first ConfigFileError <$> try (LBS.readFile fp)
 
 -- Construct the function that will take a ``FilePath``, read it in, decode it,
 -- and construct our ``PartialConf``.

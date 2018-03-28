@@ -2,6 +2,8 @@
 {-# OPTIONS_GHC -fno-warn-missing-methods #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module FirstApp.Types
   ( Error (..)
   , ConfigError (..)
@@ -31,8 +33,9 @@ import           Data.Text                          (Text)
 
 import           System.IO.Error                    (IOError)
 
-import           Data.Monoid                        (Last,
-                                                     Monoid (mappend, mempty))
+import           Data.Monoid                        (Last (Last),
+                                                     Monoid (mappend, mempty)
+                                                    , (<>))
 
 import           Data.List                          (stripPrefix)
 import           Data.Maybe                         (fromMaybe)
@@ -162,7 +165,7 @@ newtype DBFilePath = DBFilePath
 -- Add some fields to the ``Conf`` type:
 -- - A customisable port number: ``Port``
 -- - A filepath for our SQLite database: ``DBFilePath``
-data Conf = Conf
+data Conf = Conf Port DBFilePath
 
 -- We're storing our Port as a Word16 to be more precise and prevent invalid
 -- values from being used in our application. However Wai is not so stringent.
@@ -177,12 +180,13 @@ data Conf = Conf
 confPortToWai
   :: Conf
   -> Int
-confPortToWai =
-  error "confPortToWai not implemented"
+confPortToWai (Conf port path) =
+  fromIntegral (getPort port)
 
 -- Similar to when we were considering our application types, leave this empty
 -- for now and add to it as you go.
-data ConfigError = ConfigError
+data ConfigError
+  = ConfigFileError IOError
   deriving Show
 
 -- Our application will be able to load configuration from both a file and
@@ -212,7 +216,7 @@ data ConfigError = ConfigError
 data PartialConf = PartialConf
   { pcPort       :: Last Port
   , pcDBFilePath :: Last DBFilePath
-  }
+  } deriving (Show)
 
 -- We now define our ``Monoid`` instance for ``PartialConf``. Allowing us to
 -- define our always empty configuration, which would always fail our
@@ -221,9 +225,9 @@ data PartialConf = PartialConf
 instance Monoid PartialConf where
   mempty = PartialConf mempty mempty
 
-  mappend _a _b = PartialConf
-    { pcPort       = error "pcPort mappend not implemented"
-    , pcDBFilePath = error "pcDBFilePath mappend not implemented"
+  mappend a b = PartialConf
+    { pcPort       = pcPort a <> pcPort b
+    , pcDBFilePath = pcDBFilePath a <> pcDBFilePath b
     }
 
 -- When it comes to reading the configuration options from the command-line, we
@@ -235,5 +239,14 @@ instance Monoid PartialConf where
 -- library to handle the parsing and decoding for us. In order to do this, we
 -- have to tell aeson how to go about converting the JSON into our PartialConf
 -- data structure.
+
 instance FromJSON PartialConf where
-  parseJSON = error "parseJSON for PartialConf not implemented yet."
+  parseJSON = A.withObject "conf"  $  \v -> do
+    port      :: Maybe Word16 <-   v  A..:? "port"
+    filePath  :: Maybe String <-   v  A..:? "path"
+    let port' = Last $ Port       <$> port
+        fp'   = Last $ DBFilePath <$> filePath
+    return $ PartialConf port' fp'
+
+-- x = A.eitherDecode "{\"port\": 123, \"path\": \"foo\"}" :: Either String PartialConf
+-- y = A.eitherDecode "{\"port\": 123}" :: Either String PartialConf
