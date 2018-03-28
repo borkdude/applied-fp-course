@@ -139,12 +139,14 @@ handleRequest
   :: DB.FirstAppDB
   -> RqType
   -> IO (Either Error Response)
-handleRequest _db (AddRq _ _) =
-  (resp200 PlainText "Success" <$) <$> error "AddRq handler not implemented"
-handleRequest _db (ViewRq _)  =
-  error "ViewRq handler not implemented"
-handleRequest _db ListRq      =
-  error "ListRq handler not implemented"
+handleRequest db (AddRq topic commentText) =
+  (resp200 PlainText "Success" <$) <$> DB.addCommentToTopic db topic commentText
+
+handleRequest db (ViewRq topic) =
+  fmap resp200Json <$> DB.getComments db topic
+
+handleRequest db ListRq =
+  fmap resp200Json <$> DB.getTopics db
 
 mkRequest
   :: Request
